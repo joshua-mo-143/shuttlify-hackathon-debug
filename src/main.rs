@@ -18,16 +18,16 @@ struct Cli {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    // let repo_url = if let Some(repo_url) = cli.repo_url {
-    //     repo_url
-    // } else {
-    //     get_git_repo()?
-    // };
+    let repo_url = if let Some(repo_url) = cli.repo_url {
+        repo_url
+    } else {
+        get_git_repo()?
+    };
 
     let repo = GreptileRepository {
         remote: "github".to_string(),
         branch: "main".to_string(),
-        repository: "shuttle-hq/zero-to-prod-newsletter-api".to_string(),
+        repository: "shuttle-hq/zero-to-production-newsletter-api".to_string(),
     };
 
     let repo_id = repo.as_repo_id();
@@ -86,7 +86,7 @@ impl GreptileClient {
     }
 
     fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
-        let github_token = std::env::var("GH_TOKEN")?;
+        let github_token = std::env::var("GITHUB_ACCESS_TOKEN")?;
         let greptile_api_token = std::env::var("GREPTILE_API_TOKEN")?;
 
         Ok(Self {
