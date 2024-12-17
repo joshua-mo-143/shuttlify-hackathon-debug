@@ -1,0 +1,16 @@
+[package]
+name = "shuttle-newsletter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
+llm-chain = "0.13.0"
+llm-chain-openai = "0.13.0"
+tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
+reqwest = { version = "0.12.9", features = ["json"] }
+serde = "*"
+git2 = "*"
+uuid = { version = "*", features = ["v4"] }
+regex = "*"
+urlencoding = "2.1.3"
