@@ -86,7 +86,7 @@ impl GreptileClient {
     }
 
     fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
-        let github_token = std::env::var("GITHUB_ACCESS_TOKEN")?;
+        let github_token = std::env::var("GH_TOKEN")?;
         let greptile_api_token = std::env::var("GREPTILE_API_TOKEN")?;
 
         Ok(Self {
