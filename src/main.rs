@@ -18,38 +18,34 @@ struct Cli {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    let repo_url = if let Some(repo_url) = cli.repo_url {
+    let repository = if let Some(repo_url) = cli.repo_url {
         repo_url
     } else {
         get_git_repo()?
+        // "shuttle-hq/zero-to-production-newsletter-api".to_string()
     };
 
     let repo = GreptileRepository {
         remote: "github".to_string(),
         branch: "main".to_string(),
-        repository: "shuttle-hq/zero-to-production-newsletter-api".to_string(),
+        repository,
     };
 
     let repo_id = repo.as_repo_id();
 
-    println!("{repo_id}");
-
     let greptile = GreptileClient::from_env()?;
 
-    let req: GreptileIndexRequest = repo.clone().into();
+    // let req: GreptileIndexRequest = repo.clone().into();
 
-    greptile.index_repo(req).await?;
+    // greptile.index_repo(req).await?;
 
-    let query =
-        "What files do I need to change to make this project compatible with Shuttle".to_string();
+    let query = PROMPT.to_string();
 
     let req = GreptileQueryRequest::new(repo, GreptileMessage::user(query));
 
-    println!("{req:?}");
-
     let response = greptile.query_repo(req).await?;
 
-    println!("{response}");
+    termimad::print_text(&response);
 
     Ok(())
 }
@@ -128,9 +124,9 @@ impl GreptileClient {
             .await?;
 
         if response.status() != 200 {
-            return Err(response.text().await.unwrap().into());
+            Err(response.text().await.unwrap().into())
         } else {
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -146,7 +142,6 @@ impl GreptileClient {
             .header("X-Github-Token", &self.github_token)
             .json(&req);
 
-        println!("{response:?}");
         let mut response = response.send().await?;
 
         let response_body = response.text().await?;
@@ -284,3 +279,74 @@ impl GreptileRepository {
         format!("{}:{}:{}", self.remote, self.branch, self.repository)
     }
 }
+
+const PROMPT: &str = r#"Use this as a template to summarise the project and convert it to run on the Shuttle Rust framework and platform:
+
+**Supported Shuttle Resources:**
+
+Refer to the following list when evaluating the project's resource compatibility:
+
+Shared Databases
+
+Type: PostgreSQL
+
+- Feature Flag: shuttle-shared-db::Postgres
+
+Supported Output Types:
+
+- sqlx::Pool (async connection via SQLx)
+- Custom connection strings via Secrets.toml
+
+Important Notes:
+
+- Databases are isolated within a shared cluster
+- Credentials must be managed through Secrets.toml
+
+```json
+{
+  "resources": [
+    {
+      "type": "database",
+      "flavour": "postgres",
+      "schema": "src/schema.sql",
+      "supported": true
+    },
+    {
+      "type": "cache",
+      "flavour": "redis",
+      "supported": false
+    }
+  ],
+  "framework": "actix-web",
+  "framework-version": "4",
+  "static-files": [
+    "src/routes/login/home.html"
+  ],
+  "secrets": [
+    "APP_APPLICATION__HMAC_SECRET",
+    "APP_DATABASE__PASSWORD",
+    "APP_EMAIL_CLIENT__AUTHORIZATION_TOKEN",
+    "APP_EMAIL_CLIENT__SENDER_EMAIL"
+  ],
+  "rust-code-changes-to-support-resources": [
+    {
+      "filepath": "src/main.rs",
+      "description": "Modify main.rs to use Shuttle's main macro and inject Postgres and Redis connections. Replace tokio::main with shuttle_runtime::main and modify the main function to accept PgPool and Redis from Shuttle."
+    },
+    {
+      "filepath": "src/configuration.rs",
+      "description": "Adapt configuration loading to use Shuttle's Secrets management instead of YAML files. Modify the Settings struct and related code to work with Shuttle's configuration injection."
+    },
+    {
+      "filepath": "src/startup.rs",
+      "description": "Modify application startup code to accept database pool and Redis connection from Shuttle instead of creating them. Adapt the Application::build function accordingly."
+    },
+    {
+      "filepath": "Cargo.toml",
+      "description": "Add Shuttle dependencies: shuttle-runtime, shuttle-actix-web, shuttle-shared-db, and shuttle-secrets. Update existing dependencies to versions compatible with Shuttle."
+    }
+  ]
+}
+```
+
+Your output should be in Markdown."#;
